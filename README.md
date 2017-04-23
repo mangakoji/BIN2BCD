@@ -15,7 +15,8 @@ chart/BIN2BCD.bdf on Quartus
 
 
 ## usage
-show FPGA/RTL/BIN2BCD.v 's BIN2BCD_top()  
+show FPGA/RTL/BIN2BCD.v 's BIN2BCD_top() 
+```verilogHDL:sample 
     BIN2BCD u_BIN2BCD(  
           .CK_i     ( CK_i      )// clock maybe fmax=11.5  
         , .XARST_i  ( XARST_i   )// sysreset L  
@@ -23,7 +24,7 @@ show FPGA/RTL/BIN2BCD.v 's BIN2BCD_top()
         , .DAT_i    ( DAT       )// input data 32bit binary  
         , .QQ_o     ( QQ_o      )// output BCD 10*40=40bit  
     ) ;  
-    
+````
   
   
 ## modules
