@@ -29,13 +29,14 @@ show FPGA/RTL/BIN2BCD.v 's BIN2BCD_top()
   
 ## modules
 in file FPGA/RTL/BIN2BCD.v is incude  
+```Verilog:sample 
 BCD_ADDER()     : addition BOTH 1 DIGIT BCD A and B.  
 BIN2BCD()       : conv 32bit binary to 10 digit BDC(decimal)  
 BIN2BCD_top()   : a sample of instance for check fmax  
 TB_BIN2BCD()    :test bentch  
                     1000 random patarn check  
                     I like contain test bench in same HDL file :-P  
-  
+```  
   
 ## Features
 This is No smart only BluteForce flash binary to BCD converter.  
