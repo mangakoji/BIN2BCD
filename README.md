@@ -47,7 +47,7 @@ This is Millionaire coding.
 
 ## Demo
 show this youtube  
-http://mangakoji.hatenablog.com/entry/2017/04/22  
+http://mangakoji.hatenablog.com/entry/2017/04/23/213753
 
 
 ## Requirement
@@ -66,8 +66,7 @@ writen in VerilogHDL.
 
 
 
-## Help:  http://mangakoji.hatenablog.com/entry/2017/04/22
-
+## Help:  http://mangakoji.hatenablog.com/entry/2017/04/23/213753
 
 
 ## Licence:
