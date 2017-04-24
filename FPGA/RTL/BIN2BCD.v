@@ -5,6 +5,7 @@
 // input DAT_i/32   : binary
 // output QQ        : BCD 10 digit
 //
+//170424m           :add generate begin bleas
 //170422s           :by @mangakoji
 
 
@@ -225,7 +226,8 @@ module TB_BIN2BCD #(
     ) ;
     genvar g_idx ;
     generate
-        for (g_idx=0;g_idx<10; g_idx=g_idx+1)
+        for (g_idx=0;g_idx<10; g_idx=g_idx+1) begin :gen_digit
             assign QQ_DIGIT[g_idx] = QQ[g_idx*4 +:4] ;
+        end
     endgenerate
 endmodule
