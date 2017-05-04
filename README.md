@@ -1,6 +1,6 @@
 BIN2BCD
 =======
-convert number 26 bit binary to 8 digit BCD(decimal);  
+* Convert number 26 bit binary to 8 digit BCD(decimal);  
 total4*8=32bit.
 
 
@@ -8,11 +8,11 @@ total4*8=32bit.
 FPGA , Verilog sample  
 selectable 2 mode included.  
 
-*Millionaire coding mode( Flash)
+* Millionaire coding mode( Flash)
 Flash type 1 clock dly but very slow fmax=11.8MHz ,  
 size is Huge 1.5KLE on MAX10C8  
 
-*shift register mode
+* shift register mode
 fmax = 397.46MHz(restricted 250MHz)
 size is 138EL on MAX10C8
 but ratency is 27+2=29ck.
@@ -56,14 +56,14 @@ TB_BIN2BCD()            :test bentch
 ```  
   
 ## Features
-*Shift register mode is normal but not small. if you after latch QQ_o in DONE_o ,you can reduce 32 FF.  
+* Shift register mode is normal but not small. if you after latch QQ_o in DONE_o ,you can reduce 32 FF.  
 set parameter C_WO_LATCH( 1 ).  
 
-*Millionaire mode is No smart only BluteForce flash binary to BCD converter.  
+* Millionaire mode is No smart only BluteForce flash binary to BCD converter.  
 if you display BCD on 7seg LED . you use ucom is better.  
 This is Millionaire coding.  
 
-*test_bentch included in same file.  
+* test_bentch included in same file.  
  you can use in model-sim_altera directry.  
  clone,wclick *.qpf ,<ctl>k,tool->run_sim_tool->RTL_sim(set env),work->TB_*,view->wave,select signal,go sim,and enjoy! ;-)
 
