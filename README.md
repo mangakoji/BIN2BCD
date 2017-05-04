@@ -88,8 +88,7 @@ writen in VerilogHDL.
 
 
 
-## Help:  http://mangakoji.hatenablog.com/entry/2017/04/23/213753
-
+## Help: http://mangakoji.hatenablog.com/entry/2017/05/04/222049
 
 ## Licence:
 ----------
