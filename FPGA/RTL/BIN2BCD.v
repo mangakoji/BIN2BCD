@@ -2,9 +2,10 @@
 //  BIN2BCD
 //
 // binary to BCD converter (flash: 1 clock dly but huge and slow)
-// input DAT_i/32   : binary
-// output QQ        : BCD 10 digit
+// input DAT_i/27   : binary
+// output QQ        : BCD 8 digit
 //
+//170504th          :add normal shift register mode/non millionaire
 //170424m           :add generate begin bleas
 //170422s           :by @mangakoji
 
@@ -29,12 +30,13 @@ endmodule
 
 
 // main part
-module BIN2BCD (
-      input         CK_i
-    , input         XARST_i
-    , input         EN_CK_i
-    , input [31:0]  DAT_i
-    , output[39:0]  QQ_o
+// this is millionaire codeing
+module BIN2BCD_MILLIONAIRE (
+      input                 CK_i
+    , input tri0            XARST_i
+    , input tri1            EN_CK_i
+    , input tri0    [26:0]  DAT_i
+    , output        [31:0]  QQ_o
 ) ;
     // every DAT bit is H, add those SEED every digit
     localparam [32*10*4-1:0] C_BIT_SEED = {
@@ -123,29 +125,213 @@ module BIN2BCD (
 endmodule
 
 
+// BCD module 
+// made of shift register
+// in 1clock( & SFL1_i==1)
+// calc new_X = last_X * 2 + cy
+module BCD_BY2_ADDCY (
+      input             CK_i
+    , input tri1        XARST_i
+    , input tri1        EN_CK_i
+    , input tri0        RST_i
+    , input tri0        SFL1_i
+    , input tri0        cyi_i
+    , output    [ 3 :0] BCD_o
+    , output            cyo_o
+
+) ;
+    wire[ 3 :0] added   ;
+    wire        cyo     ;
+    reg [ 3 :0] BCD ;
+    assign added = BCD + 4'h3 ;
+    assign cyo = added[ 3 ] ;
+    always @ (posedge CK_i or negedge XARST_i)
+        if ( ~ XARST_i)
+            BCD <= 4'b0 ;
+        else if ( EN_CK_i )begin
+            if ( RST_i)
+                BCD <= 4'h0 ;
+            else if ( SFL1_i )
+                BCD <= ( cyo ) ? 
+                        {added[2:0] , cyi_i}
+                    :
+                        {BCD[2:0] , cyi_i}
+                ;
+        end
+    assign BCD_o = BCD ;
+    assign cyo_o = cyo ;
+endmodule
+
+
+
+// this is  non_Millionaire code
+//  calc by shift register 
+//   spend in->out 27+2 ck 
+//
+module BIN2BCD_SHIFT #(
+    parameter C_WO_LATCH = 0
+)(
+      input                 CK_i
+    , input   tri1          XARST_i
+    , input   tri1          EN_CK_i
+    , input   tri0  [26:0]  DAT_i
+    , input   tri0          REQ_i
+    , output        [31:0]  QQ_o
+    , output                DONE_o
+) ;
+    // ctl part
+    reg [ 5 :0] CTR     ;
+    reg [ 1 :0] CY_D    ;
+    wire        cy ;
+    assign cy = CTR == 6'b01_1111 ;
+    always @ (posedge CK_i or negedge XARST_i)
+        if ( ~ XARST_i)
+            CTR <= 6'h3F ;
+        else if ( EN_CK_i )
+            if ( REQ_i )
+                CTR <= {5{1'b1}} & (~(5'd27-1)) ;
+            else if ( ~ (&(CTR)) )
+                CTR <= CTR + 6'd1 ;
+    always @ (posedge CK_i or negedge XARST_i)
+        if ( ~ XARST_i)
+            CY_D <= 2'b00 ;
+        else if ( EN_CK_i )
+            CY_D <= {CY_D[0] , cy} ;
+
+    // main part
+    reg [26:0]  BIN_DAT_D ;
+    always @ (posedge CK_i or negedge XARST_i)
+        if ( ~ XARST_i)
+            BIN_DAT_D <= 27'b0 ;
+        else if ( EN_CK_i )
+            if ( REQ_i )
+                BIN_DAT_D <= DAT_i ;
+            else
+                BIN_DAT_D <= {BIN_DAT_D[25:0] , 1'b0} ;
+        
+    wire[ 3 :0] BCD [ 7 :0]     ;
+    wire[ 7 :0] cys             ;
+    genvar g_idx ;  
+    generate 
+        for (g_idx=0; g_idx<8; g_idx=g_idx+1) begin:gen_BCD
+            BCD_BY2_ADDCY BCD_BY2_ADDCY (
+                  .CK_i     ( CK_i          )
+                , .XARST_i  ( XARST_i       )
+                , .EN_CK_i  ( EN_CK_i       )
+                , .RST_i    ( REQ_i         )
+                , .SFL1_i   ( 1'b1          )
+                , .cyi_i    ( (g_idx==0) ? BIN_DAT_D[26] : cys[g_idx-1] )
+                , .BCD_o    ( BCD   [ g_idx ]   )
+                , .cyo_o    ( cys   [ g_idx ]   )
+            ) ;
+        end
+    endgenerate
+    
+    reg [31 :0]  QQ ;
+    generate 
+        if (C_WO_LATCH) begin
+            assign QQ_o = {
+                  BCD   [ 7 ]
+                , BCD   [ 6 ]
+                , BCD   [ 5 ]
+                , BCD   [ 4 ]
+                , BCD   [ 3 ]
+                , BCD   [ 2 ]
+                , BCD   [ 1 ]
+                , BCD   [ 0 ]
+            } ;
+            assign DONE_o = CY_D[0] ;
+        end else begin
+            always @ (posedge CK_i or negedge XARST_i)
+                if ( ~ XARST_i )
+                    QQ <= 32'd0 ;
+                else if ( EN_CK_i   )
+                    if ( CY_D[0]    )
+                        QQ <= {
+                          BCD   [ 7 ]
+                        , BCD   [ 6 ]
+                        , BCD   [ 5 ]
+                        , BCD   [ 4 ]
+                        , BCD   [ 3 ]
+                        , BCD   [ 2 ]
+                        , BCD   [ 1 ]
+                        , BCD   [ 0 ]
+                    } ;
+            assign QQ_o = QQ ;
+            assign DONE_o = CY_D [1] ;
+        end
+    endgenerate
+endmodule
+
+
+module BIN2BCD #(
+      parameter C_MILLIONAIRE = 0   //1:Millionaire code  0:normal shift regs
+    , parameter C_WO_LATCH   = 0    //0:BCD latch, increse 32FF, 1:less FF but
+)(
+      input                 CK_i
+    , input   tri1          XARST_i
+    , input   tri1          EN_CK_i
+    , input   tri0  [26:0]  DAT_i
+    , input   tri0          REQ_i
+    , output        [31:0]  QQ_o
+    , output                DONE_o
+) ;
+    generate 
+        if (C_MILLIONAIRE) begin: gen_MILLIONAIRE
+            BIN2BCD_MILLIONAIRE BIN2BCD_MILLIONAIRE (
+                  .CK_i     ( CK_i     )
+                , .XARST_i  ( XARST_i  )
+                , .EN_CK_i  ( EN_CK_i  )
+                , .DAT_i    ( DAT_i    )
+                , .QQ_o     ( QQ_o     )
+            ) ;
+        end else begin :gen_NON_MILLIONAIRE
+            BIN2BCD_SHIFT #(
+                .C_WO_LATCH ( C_WO_LATCH )
+            )BIN2BCD_SHIFT (
+                  .CK_i     ( CK_i      )
+                , .XARST_i  ( XARST_i   )
+                , .EN_CK_i  ( EN_CK_i   )
+                , .DAT_i    ( DAT_i     )
+                , .REQ_i    ( REQ_i     )
+                , .QQ_o     ( QQ_o      )
+                , .DONE_o   ( DONE_o    )
+            ) ;
+        end
+    endgenerate
+endmodule
+
 
 //example  instanse for mesure fmax
 module BIN2BCD_top(
       input         CK_i
     , input         XARST_i
     , input         EN_CK_i
-    , input [31:0]  DAT_i
-    , output[39:0]  QQ_o
+    , input [26:0]  DAT_i
+    , input         REQ_i
+    , output[31:0]  QQ_o
+    , output        DONE_o
 ) ;
-    reg [31:0]  DAT ;
+    reg [26:0]  DAT ;
     always @(posedge CK_i or negedge XARST_i)
         if ( ~ XARST_i)
-            DAT <= 'd0 ;
+            DAT <= 27'd0 ;
         else if ( EN_CK_i )
             DAT <= DAT_i ;
-    BIN2BCD u_BIN2BCD(
+    BIN2BCD #(
+         .C_MILLIONAIRE( 0 )        //non_millionaire mode=0
+    )u_BIN2BCD(
           .CK_i     ( CK_i      )
         , .XARST_i  ( XARST_i   )
         , .EN_CK_i  ( EN_CK_i   )
         , .DAT_i    ( DAT       )
+        , .REQ_i    ( REQ_i     )
         , .QQ_o     ( QQ_o      )
+        , .DONE_o   ( DONE_o    )
     ) ;
 endmodule
+
+
 
 // test bentch random input compair
 module TB_BIN2BCD #(
@@ -172,31 +358,41 @@ module TB_BIN2BCD #(
  
     integer rand_reg    = 1 ;
     integer idx ;
-    reg [31:0]  DAT ;
-    reg [ 3:0] DIGIT    [0:9]  ;
-    reg [ 3:0] DIGIT_D  [0:9]  ;
-    reg [ 3:0] DIGIT_DD [0:9]  ;
-    reg [ 3:0] DIGIT_DDD[0:9]  ;
-    wire[39:0]  QQ      ;
-    wire    [3:0]   QQ_DIGIT [0:9] ;
-    reg [9:0]   CMP ;
+    reg [26:0]  DAT ;
+    reg [ 3:0] DIGIT    [0:7]  ;
+    reg [ 3:0] DIGIT_D  [0:7]  ;
+    reg [ 3:0] DIGIT_DD [0:7]  ;
+    reg [ 3:0] DIGIT_DDD[0:7]  ;
+    wire[31:0]  QQ      ;
+    wire    [3:0]   QQ_DIGIT [0:7] ;
+    reg [7:0]   CMP ;
     reg         CMP_TOTAL   ;
+    reg         REQ         ;
+    wire        DONE        ;
     initial begin
         rand_reg = 1 ;
-        for (idx=0;idx<10; idx=idx+1) begin
+        REQ <= 1'b0 ;
+        for (idx=0;idx<8; idx=idx+1) begin
             DIGIT[idx] =  'd0 ;
             CMP[idx] <= 1'b1 ;
         end 
+        repeat (10) @(posedge CK) ;
         repeat( 10000 ) begin
             DAT = $random(rand_reg) ;
 //            DAT = rand_reg ;
 //            rand_reg = rand_reg + 1 ;
-            for (idx=0;idx<10; idx=idx+1) begin
+            REQ <= 1'b1 ;
+            @(posedge CK) ;
+            REQ <= 1'b0 ;
+            while( ~ DONE )
+                @(posedge CK) ;
+            for (idx=0;idx<8; idx=idx+1) begin
                 DIGIT[idx] =  (DAT/(10**idx)) % 10 ;
-                CMP[idx] = (QQ_DIGIT[idx] == DIGIT_D[idx]) ;
+                CMP[idx] = (QQ_DIGIT[idx] == DIGIT[idx]) ;
                 CMP_TOTAL = & CMP ;
             end
-            @(posedge CK);
+            @ (posedge CK) ;
+            
         end
         $stop ;
     end 
@@ -208,7 +404,7 @@ module TB_BIN2BCD #(
                 DIGIT_DD[idx] <=  'd0 ;
                 DIGIT_DDD[idx] <=  'd0 ;
             end
-        end else begin
+        end else if ( DONE ) begin
             for (idx=0;idx<10; idx=idx+1) begin
                 DIGIT_D[idx]    <= DIGIT[idx] ;
                 DIGIT_DD[idx]   <= DIGIT_D[idx] ;
@@ -217,16 +413,20 @@ module TB_BIN2BCD #(
         end
 
 
-    BIN2BCD u_BIN2BCD(
+    BIN2BCD #(
+        .C_MILLIONAIRE ( 0 )
+    )u_BIN2BCD(
           .CK_i     ( CK        )
         , .XARST_i  ( XARST     )
         , .EN_CK_i  ( 1'b1      )
         , .DAT_i    ( DAT       )
+        , .REQ_i    ( REQ       )
         , .QQ_o     ( QQ        )
+        , .DONE_o   ( DONE      )
     ) ;
     genvar g_idx ;
     generate
-        for (g_idx=0;g_idx<10; g_idx=g_idx+1) begin :gen_digit
+        for (g_idx=0;g_idx<8; g_idx=g_idx+1) begin :gen_digit
             assign QQ_DIGIT[g_idx] = QQ[g_idx*4 +:4] ;
         end
     endgenerate
