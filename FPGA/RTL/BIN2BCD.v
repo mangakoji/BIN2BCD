@@ -5,6 +5,7 @@
 // input DAT_i/27   : binary
 // output QQ        : BCD 8 digit
 //
+//170506sa          :calc stop by CTR
 //170504th          :add normal shift register mode/non millionaire
 //170424m           :add generate begin bleas
 //170422s           :by @mangakoji
@@ -219,7 +220,7 @@ module BIN2BCD_SHIFT #(
                 , .XARST_i  ( XARST_i       )
                 , .EN_CK_i  ( EN_CK_i       )
                 , .RST_i    ( REQ_i         )
-                , .SFL1_i   ( 1'b1          )
+                , .SFL1_i   ( ~ CTR[5]      )
                 , .cyi_i    ( (g_idx==0) ? BIN_DAT_D[26] : cys[g_idx-1] )
                 , .BCD_o    ( BCD   [ g_idx ]   )
                 , .cyo_o    ( cys   [ g_idx ]   )

@@ -67,6 +67,9 @@ This is Millionaire coding.
  you can use in model-sim_altera directry.  
  clone,wclick *.qpf ,<ctl>k,tool->run_sim_tool->RTL_sim(set env),work->TB_*,view->wave,select signal,go sim,and enjoy! ;-)
 
+## vesion
+2017-05-06sa 005 :on calc done , stop shift calculator. QQ_o data is stoped.
+
 ## Demo
 show this youtube  
 http://mangakoji.hatenablog.com/entry/2017/04/23/213753
